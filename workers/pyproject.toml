@@ -1,0 +1,17 @@
+[project]
+name = "orderflow-workers"
+version = "0.1.0"
+description = "OrderFlow RabbitMQ workers"
+requires-python = ">=3.12"
+dependencies = [
+    "pika>=1.3.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = [".", "../backend"]
+testpaths = ["tests"]

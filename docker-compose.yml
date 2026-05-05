@@ -1,0 +1,106 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      DATABASE_PATH: /data/orderflow.db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/%2F
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+    volumes:
+      - orderflow_data:/data
+    ports:
+      - "8000:8000"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  payment-worker:
+    build:
+      context: .
+      dockerfile: workers/Dockerfile
+    command: ["python", "-m", "worker_app.consumers.payment_worker"]
+    environment:
+      DATABASE_PATH: /data/orderflow.db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/%2F
+    volumes:
+      - orderflow_data:/data
+    depends_on:
+      api:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+
+  stock-worker:
+    build:
+      context: .
+      dockerfile: workers/Dockerfile
+    command: ["python", "-m", "worker_app.consumers.stock_worker"]
+    environment:
+      DATABASE_PATH: /data/orderflow.db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/%2F
+    volumes:
+      - orderflow_data:/data
+    depends_on:
+      api:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+
+  shipping-worker:
+    build:
+      context: .
+      dockerfile: workers/Dockerfile
+    command: ["python", "-m", "worker_app.consumers.shipping_worker"]
+    environment:
+      DATABASE_PATH: /data/orderflow.db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/%2F
+    volumes:
+      - orderflow_data:/data
+    depends_on:
+      api:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+
+  notification-worker:
+    build:
+      context: .
+      dockerfile: workers/Dockerfile
+    command: ["python", "-m", "worker_app.consumers.notification_worker"]
+    environment:
+      DATABASE_PATH: /data/orderflow.db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/%2F
+    volumes:
+      - orderflow_data:/data
+    depends_on:
+      api:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    environment:
+      VITE_API_BASE_URL: /api
+      API_PROXY_TARGET: http://api:8000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+
+volumes:
+  orderflow_data:
