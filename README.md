@@ -8,6 +8,8 @@ It demonstrates how a mini store can create orders quickly through an API or fro
 Vue Frontend -> FastAPI API -> RabbitMQ -> Workers -> SQLite -> Vue Polling
 ```
 
+![flow](images/fluxo.png)
+
 ## Overview
 
 The user creates an order in the frontend. The API saves it as `PENDING`, publishes an `order.created` event, and the workers process the rest of the flow in the background.
